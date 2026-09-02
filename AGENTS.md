@@ -102,6 +102,11 @@ json.dump({k:sorted(v) for k,v in keys.items()}, open('tools/prusa_keys.json','w
 
 ## Invariants to keep (or the bundle won't load)
 
+- **Printer `id` / `model.base_model` / `model.model` must be space-free tokens** (e.g. `KOBRAS1`,
+  not `Kobra S1`). PrusaSlicer treats these as bare identifiers; a space makes the printer load
+  without any error yet never appear in the Add Printer wizard. Every stock Prusa vendor uses
+  space-free tokens (MINI, MK4, XL). Keep the human name in `name:` only. The converter enforces
+  this via the `token` (identifier) vs `label` (display) split in `PRINTERS`.
 - `vendor.yaml` `id` == `<Vendor>/` folder name == `<Vendor>.idx` basename.
 - `default_print` (in `preset-printer`) must exactly match a print-leaf `name`.
 - `default_material` (in the print `*common*` base) must exactly match a filament `name`.
