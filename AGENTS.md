@@ -112,6 +112,27 @@ json.dump({k:sorted(v) for k,v in keys.items()}, open('tools/prusa_keys.json','w
 - `default_material` (in the print `*common*` base) must exactly match a filament `name`.
 - The per-version `manifest.json` must hash every file except itself; hashes must match.
 
+## PrusaSlicer 3.0.0-alpha11 limitation (important)
+
+The bundles are correct and pass Prusa's official schema, but **alpha11 will not show any
+third-party vendor in the Add Printer picker**. In `PresetInteractor::load_preset_bundle`
+the step that materializes printer configs is hardcoded to Prusa's own vendors:
+
+```cpp
+// TODO: remove this when config wizard is ready
+for (const auto& vendor : {"PrusaResearch", "PrusaResearchSLA"}) { ... create_printer_config(...) }
+```
+
+Any other vendor loads without error but never gets `create_printer_config()`/`evaluate()`
+called, so it produces zero printer presets and is invisible. This is still the case on
+Prusa's `main` as of this writing — it should resolve when Prusa removes that block.
+
+Workaround: `tools/merge_into_prusaresearch.py` merges the Kobra printers INTO the locally
+installed PrusaResearch bundle (which the hardcoded loop does process), de-colliding our
+`*common*`/`*PLA*`/... base ids. It is FRAGILE — PrusaResearch is an online repo and may be
+re-synced/overwritten, reverting the merge; re-run the script (PrusaSlicer closed) to re-apply,
+or `--revert` to undo. The standalone `dist/*.zip` bundles remain the correct long-term artifact.
+
 ## Gotchas
 
 - These beds and profiles are best-effort; always print a calibration model after regenerating.
