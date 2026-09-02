@@ -1,0 +1,32 @@
+{
+    "type": "filament",
+    "from": "system",
+    "setting_id": "GFSA04",
+    "filament_id": "GFPLA",
+    "is_custom_defined": "0",
+    "instantiation": "true",
+    "version": "1.3.2510.31",
+    "inherits": "Anycubic PLA @Anycubic Kobra S1 0.4 nozzle",
+    "name": "Generic PLA @Anycubic Kobra S1 0.4 nozzle",
+    "filament_settings_id": [
+        "Generic PLA @Anycubic Kobra S1 0.4 nozzle"
+    ],
+    "filament_vendor": [
+        "Generic"
+    ],
+    "filament_type": [
+        "PLA"
+    ],
+    "compatible_printers": [
+        "Anycubic Kobra S1 0.4 nozzle"
+    ],
+    "filament_flow_ratio": [
+        "0.98"
+    ],
+    "filament_max_volumetric_speed": [
+        "8"
+    ],
+    "slow_down_layer_time": [
+        "12"
+    ]
+}

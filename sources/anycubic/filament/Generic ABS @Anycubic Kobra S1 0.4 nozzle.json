@@ -1,0 +1,47 @@
+{
+    "type": "filament",
+    "from": "system",
+    "setting_id": "GFSA04",
+    "filament_id": "GFABS",
+    "is_custom_defined": "0",
+    "instantiation": "true",
+    "version": "1.3.2510.31",
+    "inherits": "Anycubic ABS @Anycubic Kobra S1 0.4 nozzle",
+    "name": "Generic ABS @Anycubic Kobra S1 0.4 nozzle",
+    "filament_settings_id": [
+        "Generic ABS @Anycubic Kobra S1 0.4 nozzle"
+    ],
+    "filament_vendor": [
+        "Generic"
+    ],
+    "filament_type": [
+        "ABS"
+    ],
+    "compatible_printers": [
+        "Anycubic Kobra S1 0.4 nozzle"
+    ],
+    "filament_flow_ratio": [
+        "0.95"
+    ],
+    "filament_max_volumetric_speed": [
+        "8"
+    ],
+    "full_fan_speed_layer": [
+        "10"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "260"
+    ],
+    "overhang_fan_speed": [
+        "100"
+    ],
+    "pressure_advance": [
+        "0.025"
+    ],
+    "textured_plate_temp": [
+        "110"
+    ],
+    "textured_plate_temp_initial_layer": [
+        "110"
+    ]
+}

@@ -1,0 +1,35 @@
+{
+    "type": "filament",
+    "from": "system",
+    "setting_id": "GFSA04",
+    "filament_id": "GFPETG",
+    "is_custom_defined": "0",
+    "instantiation": "true",
+    "version": "1.3.2510.31",
+    "inherits": "Anycubic PETG @Anycubic Kobra S1 0.4 nozzle",
+    "name": "Generic PETG @Anycubic Kobra S1 0.4 nozzle",
+    "filament_settings_id": [
+        "Generic PETG @Anycubic Kobra S1 0.4 nozzle"
+    ],
+    "filament_vendor": [
+        "Generic"
+    ],
+    "filament_type": [
+        "PETG"
+    ],
+    "compatible_printers": [
+        "Anycubic Kobra S1 0.4 nozzle"
+    ],
+    "filament_flow_ratio": [
+        "0.96"
+    ],
+    "filament_max_volumetric_speed": [
+        "8"
+    ],
+    "filament_retraction_length": [
+        "1"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "240"
+    ]
+}
