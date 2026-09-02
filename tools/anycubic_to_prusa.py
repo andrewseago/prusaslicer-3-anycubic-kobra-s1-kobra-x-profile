@@ -16,14 +16,20 @@ BUILD = os.path.join(ROOT, ".build")
 KEYS = json.load(open(os.path.join(ROOT, "tools", "prusa_keys.json")))  # per-kind allowlist
 
 # ---- printer-specific config -------------------------------------------------
+# NOTE: `token` (base_model / model / printer id) must be a space-free identifier —
+# PrusaSlicer's condition expressions and model lookup treat it as a bare token, so a
+# value with a space ("Kobra S1") silently breaks matching and hides the printer.
+# `label` is the human-facing name shown in the wizard and preset names.
 PRINTERS = {
     "s1": dict(
-        src_name="Anycubic Kobra S1", model="Kobra S1", vendor_id="AnycubicKobraS1",
+        src_name="Anycubic Kobra S1", label="Kobra S1", token="KOBRAS1",
+        vendor_id="AnycubicKobraS1",
         repo_id="anycubic-kobra-s1-fff", repo_name="Anycubic Kobra S1 FFF",
         zip_name="anycubic-kobra-s1-fff-offline.zip", bed=250, park_y=240,
     ),
     "x": dict(
-        src_name="Anycubic Kobra X", model="Kobra X", vendor_id="AnycubicKobraX",
+        src_name="Anycubic Kobra X", label="Kobra X", token="KOBRAX",
+        vendor_id="AnycubicKobraX",
         repo_id="anycubic-kobra-x-fff", repo_name="Anycubic Kobra X FFF",
         zip_name="anycubic-kobra-x-fff-offline.zip", bed=260, park_y=250,
     ),
@@ -348,11 +354,25 @@ def write(path, text):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     open(path, "w").write(text)
 
+def png_to_svg(png_path, svg_path):
+    """Wrap a PNG cover image in a valid SVG (Prusa wizard thumbnails must be SVG)."""
+    if not os.path.exists(png_path):
+        return None
+    b64 = base64.b64encode(open(png_path, "rb").read()).decode()
+    svg = ('<svg xmlns="http://www.w3.org/2000/svg" '
+           'xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1000 1000">'
+           f'<image width="1000" height="1000" xlink:href="data:image/png;base64,{b64}"/>'
+           '</svg>')
+    os.makedirs(os.path.dirname(svg_path), exist_ok=True)
+    open(svg_path, "w").write(svg)
+    return os.path.basename(svg_path)
+
 # ---------------- build one printer bundle -----------------------------------
 def build(spkey):
     sp = PRINTERS[spkey]
-    model = sp["model"]
-    ver = "1.0.0"
+    tok = sp["token"]      # space-free identifier for ids / base_model / conditions
+    label = sp["label"]    # human-facing name used in preset names
+    ver = "1.0.1"
     repo_root = os.path.join(BUILD, sp["vendor_id"])
     if os.path.exists(repo_root):
         shutil.rmtree(repo_root)
@@ -375,7 +395,9 @@ def build(spkey):
         return None
     bed_stl = copy_asset(f"{sp['src_name']}_buildplate_model.stl", f"{sp['vendor_id']}_bed.stl")
     bed_svg = copy_asset(f"{sp['src_name']}_buildplate_texture.svg", f"{sp['vendor_id']}.svg")
-    thumb = copy_asset(f"{sp['src_name']}_cover.png", f"{sp['vendor_id']}_thumbnail.png")
+    # Wizard thumbnails must be SVG (Prusa ships only .svg). Wrap the cover PNG in an SVG.
+    thumb = png_to_svg(os.path.join(SRC, f"{sp['src_name']}_cover.png"),
+                       os.path.join(vdir, "assets", f"{sp['vendor_id']}_thumbnail.svg"))
 
     # vendor.yaml
     vy = []
@@ -388,8 +410,8 @@ def build(spkey):
               "      user_editable: false\n  sheet:\n    cold:\n      default: false\n      user_editable: false"
               % (sp["vendor_id"], sp["repo_name"], ver))
     printer_doc = [
-        "kind: printer", "technology: FFF", f"name: {sp['src_name']}", f"id: {model}",
-        "model:", f"  base_model: {model}", f"  model: {model}", "tool_count: 1",
+        "kind: printer", "technology: FFF", f"name: {sp['src_name']}", f"id: {tok}",
+        "model:", f"  base_model: {tok}", f"  model: {tok}", "tool_count: 1",
         "features:", "  input_shaper:", "    default: true", "visual:",
         f"  bed_model: {bed_stl}", f"  bed_texture: {bed_svg}", f"  thumbnail: {thumb}",
     ]
@@ -401,15 +423,15 @@ def build(spkey):
             f"condition: printer.{supp}", "features:", "  nozzle_diameter:", f"    default: {nz}"]))
     vy.append("\n".join(["kind: sheet", "id: pei_textured", "name: PEI Textured", "type: pei_textured"]))
     vy.append("\n".join([
-        "kind: printer_config", f"id: {model.lower().replace(' ','')}", f"name: {sp['src_name']}",
-        f"printer: {model}", f"legacy_printer_model: [{model}]", "tool_count: 1",
+        "kind: printer_config", f"id: {tok.lower()}", f"name: {sp['src_name']}",
+        f"printer: {tok}", f"legacy_printer_model: [{tok}]", "tool_count: 1",
         "tools:", "- tool: '0.4'", "sheet: pei_textured"]))
     write(os.path.join(vdir, "vendor.yaml"), "\n---\n".join(vy) + "\n")
 
     def clean(nm):
         return re.sub(r"\s*@.*$", "", nm).strip()
     def leafname(nm, nz):
-        return f"{clean(nm)} @{model} {nz}"
+        return f"{clean(nm)} @{label} {nz}"
 
     default_print = {}
     for nz in NOZZLES:
@@ -418,7 +440,7 @@ def build(spkey):
             default_print[nz] = leafname(m["default_print_profile"], nz)
 
     # preset-printer
-    dp_id = "*default_print_%s*" % model.upper().replace(" ", "_")
+    dp_id = "*default_print_%s*" % tok
     pp = []
     hdr = [f"id: '{dp_id}'", "kind: printer", "variants:"]
     for nz in NOZZLES:
@@ -428,16 +450,16 @@ def build(spkey):
     pp.append("\n".join(hdr))
     mv = conv_machine(base_m, sp)
     doc2 = [f"id: {gid()}", "kind: printer", "inherits:", f"- '{dp_id}'", "variants:",
-            f'- condition: printer.base_model == "{model}"', f"  name: {sp['src_name']}",
+            f'- condition: printer.base_model == "{tok}"', f"  name: {sp['src_name']}",
             f"  id: {gid()}", "  values:"]
     pp.append("\n".join(doc2) + "\n" + emit_values(mv, 4))
-    slug = model.lower().replace(" ", "")
+    slug = tok.lower()
     write(os.path.join(vdir, f"preset-printer-{slug}.yaml"), "\n---\n".join(pp) + "\n")
 
     # preset-tool
     write(os.path.join(vdir, f"preset-tool-{slug}.yaml"),
-          "\n".join(["kind: tool_print", f"id: common {model}", "variants:",
-                     f'- condition: printer.base_model == "{model}"', "  name: no tool",
+          "\n".join(["kind: tool_print", f"id: common {tok}", "variants:",
+                     f'- condition: printer.base_model == "{tok}"', "  name: no tool",
                      f"  id: {gid()}"]) + "\n")
 
     # preset-print
@@ -451,9 +473,9 @@ def build(spkey):
             procs[nz].append(d)
     ret = conv_retraction(base_m)
     common = ["kind: print", "id: '*common*'", "values:",
-              f"  default_material: Anycubic PLA @{model}"]
+              f"  default_material: Anycubic PLA @{label}"]
     concrete = [f"id: {gid()}", "kind: print", "inherits:", "- '*common*'", "variants:",
-                f'- condition: printer.base_model == "{model}"', f"  id: {gid()}", "  values:"]
+                f'- condition: printer.base_model == "{tok}"', f"  id: {gid()}", "  values:"]
     concrete.append(emit_values(ret, 4))
     concrete.append("  variants:")
     for nz in NOZZLES:
@@ -493,8 +515,8 @@ def build(spkey):
     for prefix, (fp, ftype) in chosen.items():
         d = load(fp)
         vals = conv_filament(d, ftype)
-        name = f"{prefix} @{model}"
-        doc = ["kind: filament", f"name: {name}", f'condition: printer.base_model == "{model}"',
+        name = f"{prefix} @{label}"
+        doc = ["kind: filament", f"name: {name}", f'condition: printer.base_model == "{tok}"',
                f"id: {name}", "inherits:", f"- '*{ftype}*'", "values:"]
         fdocs.append("\n".join(doc) + "\n" + emit_values(vals, 2))
     write(os.path.join(vdir, f"preset-filament-{slug}.yaml"), "\n---\n".join(fdocs) + "\n")
@@ -513,7 +535,9 @@ def build(spkey):
     write(os.path.join(vdir, "manifest.json"), json.dumps(entries))
 
     # vendor_indices.zip + <Vendor>.idx
-    idx = f"min_slic3r_version = 3.0.0-alpha0\n{ver} Initial release. Converted from AnycubicSlicerNext.\n"
+    idx = (f"min_slic3r_version = 3.0.0-alpha0\n"
+           f"{ver} Space-free printer model ids so the printer appears in the wizard.\n"
+           f"1.0.0 Initial release. Converted from AnycubicSlicerNext.\n")
     idx_path = os.path.join(repo_root, sp["vendor_id"] + ".idx")
     write(idx_path, idx)
     with zipfile.ZipFile(os.path.join(repo_root, "vendor_indices.zip"), "w", zipfile.ZIP_DEFLATED) as z:
