@@ -372,7 +372,7 @@ def build(spkey):
     sp = PRINTERS[spkey]
     tok = sp["token"]      # space-free identifier for ids / base_model / conditions
     label = sp["label"]    # human-facing name used in preset names
-    ver = "1.0.1"
+    ver = "1.0.2"
     repo_root = os.path.join(BUILD, sp["vendor_id"])
     if os.path.exists(repo_root):
         shutil.rmtree(repo_root)
@@ -395,9 +395,9 @@ def build(spkey):
         return None
     bed_stl = copy_asset(f"{sp['src_name']}_buildplate_model.stl", f"{sp['vendor_id']}_bed.stl")
     bed_svg = copy_asset(f"{sp['src_name']}_buildplate_texture.svg", f"{sp['vendor_id']}.svg")
-    # Wizard thumbnails must be SVG (Prusa ships only .svg). Wrap the cover PNG in an SVG.
-    thumb = png_to_svg(os.path.join(SRC, f"{sp['src_name']}_cover.png"),
-                       os.path.join(vdir, "assets", f"{sp['vendor_id']}_thumbnail.svg"))
+    # Thumbnail: raw PNG (PrusaSlicer's card renderer handles PNG; an SVG that just wraps a
+    # raster does not render). The reference test fixture also uses a plain .png thumbnail.
+    thumb = copy_asset(f"{sp['src_name']}_cover.png", f"{sp['vendor_id']}_thumbnail.png")
 
     # vendor.yaml
     vy = []
@@ -412,7 +412,9 @@ def build(spkey):
     printer_doc = [
         "kind: printer", "technology: FFF", f"name: {sp['src_name']}", f"id: {tok}",
         "model:", f"  base_model: {tok}", f"  model: {tok}", "tool_count: 1",
-        "features:", "  input_shaper:", "    default: true", "visual:",
+        "features:", "  input_shaper:", "    default: true",
+        "  supports_high_flow_nozzle:", "    default: false",
+        "visual:",
         f"  bed_model: {bed_stl}", f"  bed_texture: {bed_svg}", f"  thumbnail: {thumb}",
     ]
     vy.append("\n".join(printer_doc))
@@ -536,7 +538,8 @@ def build(spkey):
 
     # vendor_indices.zip + <Vendor>.idx
     idx = (f"min_slic3r_version = 3.0.0-alpha0\n"
-           f"{ver} Space-free printer model ids so the printer appears in the wizard.\n"
+           f"{ver} PNG thumbnail; disable high-flow nozzle option.\n"
+           f"1.0.1 Space-free printer model ids so the printer appears in the wizard.\n"
            f"1.0.0 Initial release. Converted from AnycubicSlicerNext.\n")
     idx_path = os.path.join(repo_root, sp["vendor_id"] + ".idx")
     write(idx_path, idx)
