@@ -372,7 +372,7 @@ def build(spkey):
     sp = PRINTERS[spkey]
     tok = sp["token"]      # space-free identifier for ids / base_model / conditions
     label = sp["label"]    # human-facing name used in preset names
-    ver = "1.0.2"
+    ver = "1.0.3"
     repo_root = os.path.join(BUILD, sp["vendor_id"])
     if os.path.exists(repo_root):
         shutil.rmtree(repo_root)
@@ -412,9 +412,10 @@ def build(spkey):
     printer_doc = [
         "kind: printer", "technology: FFF", f"name: {sp['src_name']}", f"id: {tok}",
         "model:", f"  base_model: {tok}", f"  model: {tok}", "tool_count: 1",
-        "features:", "  input_shaper:", "    default: true",
-        "  supports_high_flow_nozzle:", "    default: false",
-        "visual:",
+        # HF nozzles left enabled: when merged into PrusaResearch the printer inherits
+        # supports_high_flow_nozzle=true, so HF tool variants are offered. Disabling it
+        # out from under an already-selected HF printer crashes PrusaSlicer on restart.
+        "features:", "  input_shaper:", "    default: true", "visual:",
         f"  bed_model: {bed_stl}", f"  bed_texture: {bed_svg}", f"  thumbnail: {thumb}",
     ]
     vy.append("\n".join(printer_doc))
@@ -538,7 +539,7 @@ def build(spkey):
 
     # vendor_indices.zip + <Vendor>.idx
     idx = (f"min_slic3r_version = 3.0.0-alpha0\n"
-           f"{ver} PNG thumbnail; disable high-flow nozzle option.\n"
+           f"{ver} Re-enable HF nozzle; PNG thumbnail.\n"
            f"1.0.1 Space-free printer model ids so the printer appears in the wizard.\n"
            f"1.0.0 Initial release. Converted from AnycubicSlicerNext.\n")
     idx_path = os.path.join(repo_root, sp["vendor_id"] + ".idx")
